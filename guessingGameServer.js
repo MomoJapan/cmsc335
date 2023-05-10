@@ -22,7 +22,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set("views", path.resolve(__dirname, "templates"));
 app.set("view engine", "ejs");
 app.listen(portNumber);
-console.log(`Web server started and running at http://localhost:${portNumber}`);
+console.log(`Web server started and running at https://cmsc335-project.onrender.com`);
 const url = `https://cmsc335-project.onrender.com`;
 const prompt = "Type stop to shutdown the server: ";
 process.stdout.write(prompt);
@@ -112,8 +112,7 @@ async function updateBalance(client, databaseAndCollection, userName, amount) {
     let bal = 0;
     if (person) {
         bal = person.balance + amount
-        
-    
+     
     // update the value of the 'balance' field to amount
     const updateDocument = {
         $set: {
@@ -129,18 +128,20 @@ async function updateBalance(client, databaseAndCollection, userName, amount) {
 let currUser = null;
 app.get("/", (request, response) => {
     currUser = null;
+    player = "";
     response.render("guessingGame", {});
 });
 
 app.get("/login", (request, response) => {
     let link = url + `/loggedin`; 
+    currUser = null;
+    player = "";
     let vars = {link: link};
     response.render("login", vars);
 });
 
 app.post("/loggedin", async (request, response) => {
     const userName = request.body.username;
-    currUser = userName;
     const passWord = request.body.password;
     let vars;
     try {
@@ -148,6 +149,7 @@ app.post("/loggedin", async (request, response) => {
         let user = await lookUpUsername(client, databaseAndCollection, userName);
         let passW = await lookUpPassword(client, databaseAndCollection, passWord);
         if (user && passW) {
+            currUser = userName;
             player = userName;
             vars = {issue: `Welcome Back!`, 
                     loggedin: `Logged in as <em>${user.username}</em> with a current balance of <em>${user.balance}</em>`,
@@ -174,7 +176,6 @@ app.get("/create", (request, response) => {
 app.post("/created", async (request, response) => {
     let vars;
     let name = request.body.username;
-    currUser = name;
     let pass = request.body.password;
     let user = await lookUpUsername(client, databaseAndCollection, name);
     if (user) {
@@ -210,7 +211,7 @@ app.post("/answer", async (request, response) => {
             if (userAnswer === actualAnswer) {
                 resp += `<h3>The image you correctly guessed was (Number ${actualAnswer}):</h3><br>`;
                 let image = `/images/image` + `${userAnswer}` + `.jpg`;
-                resp += `<img src='${image}'width="220" height= "220"'>`;
+                resp += `<img src='${image}'width="220" height= "220">`;
                 await updateBalance(client, databaseAndCollection, player, 1);
                 bal = await lookUpBalance(client, databaseAndCollection, player);
                 
@@ -222,9 +223,9 @@ app.post("/answer", async (request, response) => {
                 resp += `<span><h3>The image randomly chosen was (Number ${actualAnswer}): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
                 resp += `But the image you incorrectly guessed was (Number ${userAnswer}): </h3></span><br>`;
                 let actualImage = `/images/image` + `${actualAnswer}` + `.jpg`;
-                resp += `<img src='${actualImage}'width="220" height= "220"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
+                resp += `<img src='${actualImage}'width="220" height= "220">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
                 let userImage = `/images/image` + `${userAnswer}` + `.jpg`;
-                resp += `<img src='${userImage}'width="220" height= "220"'>`;
+                resp += `<img src='${userImage}'width="220" height= "220">`;
                 vars = {correct:`Sorry you were incorrect, your intuition could use some work ): `,
                         infoAndImages: resp,
                         balance: bal};
