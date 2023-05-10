@@ -1,5 +1,5 @@
 const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, 'credentials/.env') }) 
+require("dotenv");
 
 const express = require("express");   /* Accessing express module */
 const app = express();  /* app is a request handler function */
@@ -8,20 +8,21 @@ const bodyParser = require("body-parser");
 const fs = require("fs");
 process.stdin.setEncoding("utf8");
 
-if (process.argv.length != 3) {
-    process.stdout.write(`Usage guessingGameServer.js portNumber \n`);
+if (process.argv.length != 2) {
+    process.stdout.write(`Usage guessingGameServer.js \n`);
     process.exit(1); 
 }
 
-const portNumber = process.argv[2];
+const portNumber = 4000;
 let player = "";
+
 app.use(bodyParser.urlencoded({extended:false}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.set("views", path.resolve(__dirname, "templates"));
 app.set("view engine", "ejs");
 app.listen(portNumber);
-console.log(`Web server started and running at http://localhost:${portNumber}`);
-const url = `https://cmsc335-project.onrender.com`;
+console.log(`Web server started and running at https://vast-lime-buffalo-coat.cyclic.app`);
+const url = `https://vast-lime-buffalo-coat.cyclic.app`;
 const prompt = "Type stop to shutdown the server: ";
 process.stdout.write(prompt);
 process.stdin.on("readable", function () {
@@ -37,10 +38,15 @@ process.stdin.on("readable", function () {
   }
 });
 
-const userName = process.env.MONGO_DB_USERNAME;
+/*const userName = process.env.MONGO_DB_USERNAME;
 const password = process.env.MONGO_DB_PASSWORD;
 const db = process.env.MONGO_DB_NAME;
-const collection = process.env.MONGO_COLLECTION;
+const collection = process.env.MONGO_COLLECTION;*/
+
+const userName = "fhuruy";
+const password = "spr2023testudo";
+const db = "Users";
+const collection = "accountInfo";
 
  /* Our database and collection */
  const databaseAndCollection = {db: db, collection: collection};
@@ -128,18 +134,20 @@ async function lookUpOneEntry(client, databaseAndCollection, userName) {
 let currUser = null;
 app.get("/", (request, response) => {
     currUser = null;
+    player = "";
     response.render("guessingGame", {});
 });
 
 app.get("/login", (request, response) => {
     let link = url + `/loggedin`; 
+    currUser = null;
+    player = "";
     let vars = {link: link};
     response.render("login", vars);
 });
 
 app.post("/loggedin", async (request, response) => {
     const userName = request.body.username;
-    currUser = userName;
     const passWord = request.body.password;
     let vars;
     try {
@@ -148,6 +156,7 @@ app.post("/loggedin", async (request, response) => {
         let passW = await lookUpPassword(client, databaseAndCollection, passWord);
         if (user && passW) {
             player = userName;
+            currUser = userName;
             vars = {issue: `Welcome Back!`, 
                     loggedin: `Logged in as <em>${user.username}</em> with a current balance of <em>${user.balance}</em>`,
                     redirect:`<a href='/gameStart'>Start Game</a>`}; 
@@ -166,6 +175,7 @@ app.post("/loggedin", async (request, response) => {
 
 app.get("/create", (request, response) => {
     let link = url + `/created`; 
+    player = "";
     let vars = {link: link};
     response.render("create", vars);
 });
@@ -173,7 +183,6 @@ app.get("/create", (request, response) => {
 app.post("/created", async (request, response) => {
     let vars;
     let name = request.body.username;
-    currUser = name;
     let pass = request.body.password;
     let user = await lookUpUsername(client, databaseAndCollection, name);
     if (user) {
@@ -200,26 +209,20 @@ app.post("/answer", async (request, response) => {
     let resp = "";
     let bal = await lookUpBalance(client, databaseAndCollection, player)
    
+   
     if (currUser) {
         if (userAnswer < 1 || userAnswer > 4 || Number.isNaN(userAnswer)) {
             vars = {correct: `You entered a value that didn't correspond to an image. Please try again.`,
                     infoAndImages: ``,
                     balance: bal};
         } else {
-            //let bal = await lookUpBalance(client, databaseAndCollection, currUser);
             if (userAnswer === actualAnswer) {
 
                 resp += `<h3>The image you correctly guessed was (Number ${actualAnswer}):</h3><br>`;
                 let image = `/images/image` + `${userAnswer}` + `.jpg`;
                 resp += `<img src='${image}'width="220" height= "220"'>`;
-                /*
-                vars = {correct: `Correct! You have great intuition!`,
-                        infoAndImages: resp,
-                        balance: `<strong>Your current balance is still: <em>${bal}</em></strong>`}; */
                 await updateBalance(client, databaseAndCollection, player, 1);
                 bal = await lookUpBalance(client, databaseAndCollection, player);
-                
-              
                 vars = {correct: `Correct! You have great intuition!`,
                         infoAndImages: resp,
                         balance: bal};
@@ -231,10 +234,6 @@ app.post("/answer", async (request, response) => {
                 resp += `<img src='${actualImage}'width="220" height= "220"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
                 let userImage = `/images/image` + `${userAnswer}` + `.jpg`;
                 resp += `<img src='${userImage}'width="220" height= "220"'>`;
-                //let newbal = Number(bal) + 1;
-                /*vars = {correct:`Sorry you were incorrect, your intuition could use some work :( `,
-                        infoAndImages: resp,
-                        balance: `Congratulations, your new balance is: <em>${newbal}</em>`}; */
                 vars = {correct:`Sorry you were incorrect, your intuition could use some work ): `,
                         infoAndImages: resp,
                         balance: bal};
@@ -242,6 +241,4 @@ app.post("/answer", async (request, response) => {
         }
         response.render("answer", vars);
     }
-    
-});
 
