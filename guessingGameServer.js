@@ -1,5 +1,6 @@
 const path = require("path");
-require("dotenv");
+require("dotenv")
+const cors = require('cors');
 
 const express = require("express");   /* Accessing express module */
 const app = express();  /* app is a request handler function */
@@ -9,20 +10,22 @@ const fs = require("fs");
 process.stdin.setEncoding("utf8");
 
 if (process.argv.length != 2) {
-    process.stdout.write(`Usage guessingGameServer.js \n`);
+    process.stdout.write(`Usage guessingGameServer.js\n`);
     process.exit(1); 
 }
 
 const portNumber = 4000;
 let player = "";
-
+app.use(cors({
+    origin: '*'
+}));
 app.use(bodyParser.urlencoded({extended:false}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.set("views", path.resolve(__dirname, "templates"));
 app.set("view engine", "ejs");
 app.listen(portNumber);
-console.log(`Web server started and running at https://vast-lime-buffalo-coat.cyclic.app`);
-const url = `https://vast-lime-buffalo-coat.cyclic.app`;
+console.log(`Web server started and running at http://localhost:${portNumber}`);
+const url = `http://localhost:${portNumber}`;
 const prompt = "Type stop to shutdown the server: ";
 process.stdout.write(prompt);
 process.stdin.on("readable", function () {
@@ -37,11 +40,12 @@ process.stdin.on("readable", function () {
     process.stdin.resume();
   }
 });
-
-/*const userName = process.env.MONGO_DB_USERNAME;
+/*
+const userName = process.env.MONGO_DB_USERNAME;
 const password = process.env.MONGO_DB_PASSWORD;
 const db = process.env.MONGO_DB_NAME;
-const collection = process.env.MONGO_COLLECTION;*/
+const collection = process.env.MONGO_COLLECTION;
+*/
 
 const userName = "fhuruy";
 const password = "spr2023testudo";
@@ -123,31 +127,22 @@ async function updateBalance(client, databaseAndCollection, userName, amount) {
                         .updateOne(filter, updateDocument);
     } 
 }
-async function lookUpOneEntry(client, databaseAndCollection, userName) {
-    let filter = {name: userName};
-    const result = await client.db(databaseAndCollection.db)
-                        .collection(databaseAndCollection.collection)
-                        .findOne(filter);
-    console.log(result);
-    return result;
-}
+
 let currUser = null;
 app.get("/", (request, response) => {
     currUser = null;
-    player = "";
     response.render("guessingGame", {});
 });
 
 app.get("/login", (request, response) => {
     let link = url + `/loggedin`; 
-    currUser = null;
-    player = "";
     let vars = {link: link};
     response.render("login", vars);
 });
 
 app.post("/loggedin", async (request, response) => {
     const userName = request.body.username;
+    currUser = userName;
     const passWord = request.body.password;
     let vars;
     try {
@@ -156,7 +151,6 @@ app.post("/loggedin", async (request, response) => {
         let passW = await lookUpPassword(client, databaseAndCollection, passWord);
         if (user && passW) {
             player = userName;
-            currUser = userName;
             vars = {issue: `Welcome Back!`, 
                     loggedin: `Logged in as <em>${user.username}</em> with a current balance of <em>${user.balance}</em>`,
                     redirect:`<a href='/gameStart'>Start Game</a>`}; 
@@ -175,7 +169,6 @@ app.post("/loggedin", async (request, response) => {
 
 app.get("/create", (request, response) => {
     let link = url + `/created`; 
-    player = "";
     let vars = {link: link};
     response.render("create", vars);
 });
@@ -183,6 +176,7 @@ app.get("/create", (request, response) => {
 app.post("/created", async (request, response) => {
     let vars;
     let name = request.body.username;
+    currUser = name;
     let pass = request.body.password;
     let user = await lookUpUsername(client, databaseAndCollection, name);
     if (user) {
@@ -209,7 +203,6 @@ app.post("/answer", async (request, response) => {
     let resp = "";
     let bal = await lookUpBalance(client, databaseAndCollection, player)
    
-   
     if (currUser) {
         if (userAnswer < 1 || userAnswer > 4 || Number.isNaN(userAnswer)) {
             vars = {correct: `You entered a value that didn't correspond to an image. Please try again.`,
@@ -217,17 +210,17 @@ app.post("/answer", async (request, response) => {
                     balance: bal};
         } else {
             if (userAnswer === actualAnswer) {
-
                 resp += `<h3>The image you correctly guessed was (Number ${actualAnswer}):</h3><br>`;
                 let image = `/images/image` + `${userAnswer}` + `.jpg`;
                 resp += `<img src='${image}'width="220" height= "220"'>`;
                 await updateBalance(client, databaseAndCollection, player, 1);
                 bal = await lookUpBalance(client, databaseAndCollection, player);
+                
+              
                 vars = {correct: `Correct! You have great intuition!`,
                         infoAndImages: resp,
                         balance: bal};
             } else {
-               
                 resp += `<span><h3>The image randomly chosen was (Number ${actualAnswer}): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
                 resp += `But the image you incorrectly guessed was (Number ${userAnswer}): </h3></span><br>`;
                 let actualImage = `/images/image` + `${actualAnswer}` + `.jpg`;
@@ -241,4 +234,8 @@ app.post("/answer", async (request, response) => {
         }
         response.render("answer", vars);
     }
+    
+});
+
+
 
