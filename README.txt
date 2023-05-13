@@ -1,6 +1,3 @@
-Team Members:
-    Feven Huruy  (117171952)
-    Xuechao Zhou (117556049)
 
 App Description:
     Our app is an image guessing game where a player can guess which of the four images shown will be randomly selected by
